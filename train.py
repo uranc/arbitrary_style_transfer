@@ -7,18 +7,43 @@ import tensorflow as tf
 
 from style_transfer_net import StyleTransferNet
 from utils import get_train_images
+import pdb
 
-
+# STYLE_LAYERS  = ('relu4_1')
+# STYLE_LAYERS  = ('relu3_1', 'relu4_1')
 STYLE_LAYERS  = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1')
 
 TRAINING_IMAGE_SHAPE = (256, 256, 3) # (height, width, color_channels)
+# TRAINING_IMAGE_SHAPE = (256, 256, 3) # (height, width, color_channels)
 
-EPOCHS = 4
+EPOCHS = 50
+# EPOCHS = 4
 EPSILON = 1e-5
 BATCH_SIZE = 8
+# BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
 LR_DECAY_RATE = 5e-5
 DECAY_STEPS = 1.0
+
+
+# def fft_loss(p_pred, p_true):
+#     fft_pred = tf.spectral.rfft2d(tf.transpose(p_pred, (0, 3, 1, 2)))
+#     fft_true = tf.spectral.rfft2d(tf.transpose(p_true, (0, 3, 1, 2)))
+
+#     # log magnitude
+#     fft_log_mag = (tf.log(tf.abs(fft_pred)+EPSILON) - tf.log(tf.abs(fft_true)+EPSILON))
+#     total = 5.544359607481952*tf.reduce_sum(tf.reduce_mean(tf.square(fft_log_mag), axis=[2, 3]))
+
+#     # mag
+#     fft_mag = tf.abs(fft_pred)-tf.abs(fft_true)
+#     total += tf.reduce_sum(tf.reduce_mean(tf.square(fft_mag), axis=[2, 3]))
+   
+#     fft_phase = tf.abs(fft_pred)*tf.abs(fft_true) \
+#         - tf.real(fft_pred)*tf.real(fft_true) \
+#         - tf.imag(fft_pred)*tf.imag(fft_true)
+
+#     total += 3.0255547222590017e-05*tf.reduce_sum(tf.reduce_mean(tf.square(fft_phase), axis=[2, 3]))
+#     return total
 
 
 def train(style_weight, content_imgs_path, style_imgs_path, encoder_path, 
@@ -61,16 +86,22 @@ def train(style_weight, content_imgs_path, style_imgs_path, encoder_path,
         enc_gen, enc_gen_layers = stn.encoder.encode(generated_img)
 
         # compute the content loss
+        # content_loss = fft_loss(enc_gen, target_features)
         content_loss = tf.reduce_sum(tf.reduce_mean(tf.square(enc_gen - target_features), axis=[1, 2]))
 
         # compute the style loss
         style_layer_loss = []
         for layer in STYLE_LAYERS:
+            
             enc_style_feat = stn.encoded_style_layers[layer]
             enc_gen_feat   = enc_gen_layers[layer]
 
             meanS, varS = tf.nn.moments(enc_style_feat, [1, 2])
             meanG, varG = tf.nn.moments(enc_gen_feat,   [1, 2])
+            # fft_pred = tf.abs(tf.spectral.rfft2d(tf.transpose(enc_gen_feat, (0, 3, 1, 2))))
+            # fft_true = tf.abs(tf.spectral.rfft2d(tf.transpose(enc_style_feat, (0, 3, 1, 2))))
+            # meanS, varS = tf.nn.moments(fft_pred, [2, 3])
+            # meanG, varG = tf.nn.moments(fft_true,   [2, 3])
 
             sigmaS = tf.sqrt(varS + EPSILON)
             sigmaG = tf.sqrt(varG + EPSILON)
